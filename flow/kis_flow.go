@@ -72,11 +72,11 @@ func (flow *KisFlow) Run(ctx context.Context) error {
 			if err := flow.commitCurData(ctx); err != nil {
 				return err
 			}
+			flow.PrevFunctionId = flow.ThisFunctionId
+
+			fn = fn.Next()
 		}
 
-		flow.PrevFunctionId = flow.ThisFunctionId
-
-		fn = fn.Next()
 	}
 
 	return nil
@@ -141,7 +141,7 @@ func (flow *KisFlow) appendFunc(function kis.Function, fParam config.FParam) err
 		flow.FlowTail.SetN(function)
 		flow.FlowTail = function
 	}
-	flow.Funcs[function.GetId()] = function
+	flow.Funcs[function.GetConfig().FName] = function
 
 	params := make(config.FParam)
 	for k, v := range function.GetConfig().Option.Params {
@@ -186,5 +186,18 @@ func (flow *KisFlow) GetConnConf() (*config.KisConnConfig, error) {
 		return conn.GetConfig(), nil
 	} else {
 		return nil, errors.New("GetConnConf(): Connector's conf is nil")
+	}
+}
+func (flow *KisFlow) GetConfig() *config.KisFlowConfig {
+	return flow.Conf
+}
+
+// GetFuncConfigByName 得到当前Flow的配置
+func (flow *KisFlow) GetFuncConfigByName(funcName string) *config.KisFuncConfig {
+	if f, ok := flow.Funcs[funcName]; ok {
+		return f.GetConfig()
+	} else {
+		log.GetLogger().ErrorF("GetFuncConfigByName(): Function %s not found", funcName)
+		return nil
 	}
 }

@@ -43,13 +43,14 @@ func Pool() *kisPool {
 
 		// flowRouter初始化
 		_pool.flowRouter = make(flowRouter)
+
+		// +++++++++++++++++++++++++
+		// connTree初始化
+		_pool.cTree = make(connTree)
+		_pool.cInitRouter = make(connInitRouter)
+		_pool.connectors = make(map[string]Connector)
+		// +++++++++++++++++++++++++
 	})
-	// +++++++++++++++++++++++++
-	// connTree初始化
-	_pool.cTree = make(connTree)
-	_pool.cInitRouter = make(connInitRouter)
-	_pool.connectors = make(map[string]Connector)
-	// +++++++++++++++++++++++++
 	return _pool
 }
 
@@ -109,18 +110,12 @@ func (pool *kisPool) CaaSInit(cname string, c ConnInit) {
 	pool.ciLock.Lock()
 	defer pool.ciLock.Unlock()
 
-	fmt.Println("hahaha", cname)
 	if _, ok := pool.cInitRouter[cname]; !ok {
 		pool.cInitRouter[cname] = c
 	} else {
 		errString := fmt.Sprintf("KisPool Reg CaaSInit Repeat CName=%s\n", cname)
 		panic(errString)
 	}
-
-	for _, v := range pool.cInitRouter {
-		println(v)
-	}
-
 	log.GetLogger().InfoF("Add KisPool CaaSInit CName=%s", cname)
 }
 
@@ -129,7 +124,6 @@ func (pool *kisPool) CallConnInit(conn Connector) error {
 	pool.ciLock.RLock() // 读锁
 	defer pool.ciLock.RUnlock()
 	init, ok := pool.cInitRouter[conn.GetName()]
-
 	if !ok {
 		panic(errors.New(fmt.Sprintf("init connector cname = %s not reg..", conn.GetName())))
 	}

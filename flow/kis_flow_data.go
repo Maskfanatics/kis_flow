@@ -31,7 +31,7 @@ func (flow *KisFlow) commitSrcData(ctx context.Context) error {
 }
 
 func (flow *KisFlow) commitCurData(ctx context.Context) error {
-	if flow.buffer == nil {
+	if len(flow.buffer) == 0 {
 		return nil
 	}
 
@@ -52,7 +52,7 @@ func (flow *KisFlow) commitCurData(ctx context.Context) error {
 }
 
 func (flow *KisFlow) clearData(data common.KisDataMap) {
-	for k, _ := range data {
+	for k := range data {
 		delete(data, k)
 	}
 }
