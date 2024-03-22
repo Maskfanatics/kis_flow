@@ -169,3 +169,16 @@ func (pool *kisPool) CallConnector(ctx context.Context, flow Flow, conn Connecto
 
 	return errors.New(fmt.Sprintf("CName:%s FName:%s mode:%s Can not find in KisPool, Not Added.", conn.GetName(), fnConf.FName, mode))
 }
+
+func (pool *kisPool) GetFlows() []Flow {
+	pool.flowLock.RLock()
+	defer pool.flowLock.RUnlock()
+
+	var flows []Flow
+
+	for _, flow := range pool.flowRouter {
+		flows = append(flows, flow)
+	}
+
+	return flows
+}

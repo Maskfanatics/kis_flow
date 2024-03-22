@@ -20,7 +20,7 @@ type KisFlow struct {
 	Conf *config.KisFlowConfig // Flow配置策略
 
 	// Function列表
-	Funcs          map[string]kis.Function // 当前flow拥有的全部管理的全部Function对象, key: FunctionID
+	Funcs          map[string]kis.Function // 当前flow拥有的全部管理的全部Function对象, key: FunctionName
 	FlowHead       kis.Function            // 当前Flow所拥有的Function列表表头
 	FlowTail       kis.Function            // 当前Flow所拥有的Function列表表尾
 	flock          sync.RWMutex            // 管理链表插入读写的锁
