@@ -6,7 +6,8 @@ import (
 )
 
 // Function 流式计算基础计算模块，KisFunction是一条流式计算的基本计算逻辑单元，
-// 			   任意个KisFunction可以组合成一个KisFlow
+//
+//	任意个KisFunction可以组合成一个KisFlow
 type Function interface {
 	// Call 执行流式计算逻辑
 	Call(ctx context.Context, flow Flow) error
@@ -38,4 +39,11 @@ type Function interface {
 	SetN(f Function)
 	// SetP 设置上一层Function实例
 	SetP(f Function)
+
+	// ++++++++++++++++++++
+	// AddConnector 给当前Function实例添加一个Connector
+	AddConnector(conn Connector) error
+	// GetConnector 获取当前Function实例所关联的Connector
+	GetConnector() Connector
+	// ++++++++++++++++++++
 }

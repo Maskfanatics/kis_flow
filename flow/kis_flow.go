@@ -5,9 +5,11 @@ import (
 	"errors"
 	"kis-flow/common"
 	"kis-flow/config"
+	"kis-flow/conn"
 	"kis-flow/function"
 	"kis-flow/id"
 	"kis-flow/kis"
+	"kis-flow/log"
 	"sync"
 )
 
@@ -29,6 +31,11 @@ type KisFlow struct {
 	// Function列表参数
 	funcParams map[string]config.FParam // flow在当前Function的自定义固定配置参数,Key:function的实例NsID, value:FParam
 	fplock     sync.RWMutex             // 管理funcParams的读写锁
+
+	// ++++++++ 数据 ++++++++++
+	buffer common.KisRowArr  // 用来临时存放输入字节数据的内部Buf, 一条数据为interface{}, 多条数据为[]interface{} 也就是KisBatch
+	data   common.KisDataMap // 流式计算各个层级的数据源
+	inPut  common.KisRowArr  // 当前Function的计算输入数据
 }
 
 func (flow *KisFlow) Run(ctx context.Context) error {
@@ -41,12 +48,35 @@ func (flow *KisFlow) Run(ctx context.Context) error {
 		return nil
 	}
 
+	flow.PrevFunctionId = common.FunctionIdFirstVirtual
+
+	if err := flow.commitSrcData(ctx); err != nil {
+		return err
+	}
+
 	for fn != nil {
+		fid := fn.GetId()
+		flow.ThisFunction = fn
+		flow.ThisFunctionId = fid
+
+		if inputData, err := flow.getCurData(); err != nil {
+			log.GetLogger().ErrorFX(ctx, "flow.Run(): getCurData err = %s\n", err.Error())
+			return err
+		} else {
+			flow.inPut = inputData
+		}
+
 		if err := fn.Call(ctx, flow); err != nil {
 			return err
 		} else {
-			fn = fn.Next()
+			if err := flow.commitCurData(ctx); err != nil {
+				return err
+			}
 		}
+
+		flow.PrevFunctionId = flow.ThisFunctionId
+
+		fn = fn.Next()
 	}
 
 	return nil
@@ -54,6 +84,20 @@ func (flow *KisFlow) Run(ctx context.Context) error {
 
 func (flow *KisFlow) Link(fConfig *config.KisFuncConfig, fParams config.FParam) error {
 	f := function.NewKisFunction(flow, fConfig)
+
+	if fConfig.Option.CName != "" {
+		connConfig, err := fConfig.GetConnConfig()
+		if err != nil {
+			panic(err)
+		}
+		connector := conn.NetKisConnector(connConfig)
+
+		if err = connector.Init(); err != nil {
+			panic(err)
+		}
+
+		_ = f.AddConnector(connector)
+	}
 
 	if err := flow.appendFunc(f, fParams); err != nil {
 		return err
@@ -71,6 +115,9 @@ func NewKisFlow(conf *config.KisFlowConfig) *KisFlow {
 	// Function列表
 	flow.Funcs = make(map[string]kis.Function)
 	flow.funcParams = make(map[string]config.FParam)
+
+	//数据
+	flow.data = make(common.KisDataMap)
 	return flow
 }
 
@@ -108,4 +155,36 @@ func (flow *KisFlow) appendFunc(function kis.Function, fParam config.FParam) err
 	flow.funcParams[function.GetId()] = params
 
 	return nil
+}
+
+func (flow *KisFlow) Input() common.KisRowArr {
+	return flow.inPut
+}
+
+func (flow *KisFlow) GetName() string {
+	return flow.Name
+}
+
+func (flow *KisFlow) GetThisFunction() kis.Function {
+	return flow.ThisFunction
+}
+
+func (flow *KisFlow) GetThisFuncConf() *config.KisFuncConfig {
+	return flow.ThisFunction.GetConfig()
+}
+
+func (flow *KisFlow) GetConnector() (kis.Connector, error) {
+	if conn := flow.ThisFunction.GetConnector(); conn != nil {
+		return conn, nil
+	} else {
+		return nil, errors.New("GetConnector(): Connector is nil")
+	}
+}
+
+func (flow *KisFlow) GetConnConf() (*config.KisConnConfig, error) {
+	if conn := flow.ThisFunction.GetConnector(); conn != nil {
+		return conn.GetConfig(), nil
+	} else {
+		return nil, errors.New("GetConnConf(): Connector's conf is nil")
+	}
 }

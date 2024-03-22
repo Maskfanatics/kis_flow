@@ -29,9 +29,11 @@ func NewKisConnConfig(cName string, addr string, t common.KisConnType, key strin
 	stratefy := new(KisConnConfig)
 	stratefy.CName = cName
 	stratefy.AddrString = addr
+
 	stratefy.Type = t
 	stratefy.Key = key
 	stratefy.Params = param
+
 	return stratefy
 }
 

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"kis-flow/common"
 	"kis-flow/log"
 )
@@ -26,6 +27,8 @@ type KisFuncConfig struct {
 	FMode   string        `yaml:"fmode"`
 	Source  KisSource     `yaml:"source"`
 	Option  KisFuncOption `yaml:"option"`
+
+	connConf *KisConnConfig
 }
 
 func NewFuncConfig(funcName string, mode common.KisMode, source *KisSource, option *KisFuncOption) *KisFuncConfig {
@@ -50,4 +53,23 @@ func NewFuncConfig(funcName string, mode common.KisMode, source *KisSource, opti
 		config.Option = *option
 	}
 	return config
+}
+
+func (fconf *KisFuncConfig) AddConnConfig(cConf *KisConnConfig) error {
+	if cConf == nil {
+		return errors.New("KisConnConfig is nil")
+	}
+
+	fconf.connConf = cConf
+
+	_ = cConf.WithFunc(fconf)
+
+	return nil
+}
+
+func (fconf *KisFuncConfig) GetConnConfig() (*KisConnConfig, error) {
+	if fconf.connConf == nil {
+		return nil, errors.New("KisFuncConfig.connConf not set")
+	}
+	return fconf.connConf, nil
 }

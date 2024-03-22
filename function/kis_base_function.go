@@ -15,6 +15,8 @@ type BaseFunction struct {
 
 	Flow kis.Flow
 
+	connector kis.Connector
+
 	N kis.Function
 	P kis.Function
 }
@@ -120,4 +122,17 @@ func NewKisFunction(flow kis.Flow, config *config.KisFuncConfig) kis.Function {
 		panic(err)
 	}
 	return f
+}
+
+func (base *BaseFunction) AddConnector(conn kis.Connector) error {
+	if conn == nil {
+		return errors.New("conn is nil")
+	}
+	base.connector = conn
+
+	return nil
+}
+
+func (base *BaseFunction) GetConnector() kis.Connector {
+	return base.connector
 }
