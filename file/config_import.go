@@ -128,7 +128,6 @@ func ConfigImportYaml(loadPath string) error {
 		return err
 	}
 	for flowName, flowConfig := range all.Flows {
-		fmt.Println(flowConfig)
 		newFlow := flow.NewKisFlow(flowConfig)
 		for _, fp := range flowConfig.Flows {
 			if err := buildFlow(all, fp, newFlow, flowName); err != nil {

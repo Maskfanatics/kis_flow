@@ -36,9 +36,18 @@ type KisFlow struct {
 	buffer common.KisRowArr  // 用来临时存放输入字节数据的内部Buf, 一条数据为interface{}, 多条数据为[]interface{} 也就是KisBatch
 	data   common.KisDataMap // 流式计算各个层级的数据源
 	inPut  common.KisRowArr  // 当前Function的计算输入数据
+
+	// ++++++++ KisFlow Action++++++++++
+
+	action kis.Action
+
+	abort bool
 }
 
 func (flow *KisFlow) Run(ctx context.Context) error {
+
+	flow.abort = false
+
 	var fn kis.Function
 
 	fn = flow.FlowHead
@@ -54,7 +63,7 @@ func (flow *KisFlow) Run(ctx context.Context) error {
 		return err
 	}
 
-	for fn != nil {
+	for fn != nil && flow.abort == false {
 		fid := fn.GetId()
 		flow.ThisFunction = fn
 		flow.ThisFunctionId = fid
@@ -69,12 +78,10 @@ func (flow *KisFlow) Run(ctx context.Context) error {
 		if err := fn.Call(ctx, flow); err != nil {
 			return err
 		} else {
-			if err := flow.commitCurData(ctx); err != nil {
+			fn, err = flow.dealAction(ctx, fn)
+			if err != nil {
 				return err
 			}
-			flow.PrevFunctionId = flow.ThisFunctionId
-
-			fn = fn.Next()
 		}
 
 	}
@@ -200,4 +207,10 @@ func (flow *KisFlow) GetFuncConfigByName(funcName string) *config.KisFuncConfig 
 		log.GetLogger().ErrorF("GetFuncConfigByName(): Function %s not found", funcName)
 		return nil
 	}
+}
+
+func (flow *KisFlow) Next(acts ...kis.ActionFunc) error {
+	flow.action = kis.LoadActions(acts)
+
+	return nil
 }

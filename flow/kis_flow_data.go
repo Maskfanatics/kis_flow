@@ -32,6 +32,7 @@ func (flow *KisFlow) commitSrcData(ctx context.Context) error {
 
 func (flow *KisFlow) commitCurData(ctx context.Context) error {
 	if len(flow.buffer) == 0 {
+		flow.abort = true
 		return nil
 	}
 
@@ -68,4 +69,22 @@ func (flow *KisFlow) getCurData() (common.KisRowArr, error) {
 	}
 
 	return flow.data[flow.PrevFunctionId], nil
+}
+
+func (flow *KisFlow) commitReuseData(ctx context.Context) error {
+	// 判断上层是否有结果数据, 如果没有则退出本次Flow Run循环
+	if len(flow.data[flow.PrevFunctionId]) == 0 {
+		flow.abort = true
+		return nil
+	}
+
+	//本层结果数据等于上层结果数据(复用上层数据于本层)
+	flow.data[flow.ThisFunctionId] = flow.data[flow.PrevFunctionId]
+
+	//清空缓冲区（如果是 ReuseData，那么本层提交的所有数据，都不会携带到下一层）
+	flow.buffer = flow.buffer[0:0]
+
+	log.GetLogger().DebugFX(ctx, " ====> After commitReuseData, flow_name = %s, flow_id = %s\nAll Level Data =\n %+v\n", flow.Name, flow.Id, flow.data)
+
+	return nil
 }
