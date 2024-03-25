@@ -17,10 +17,6 @@ func (flow *KisFlow) dealAction(ctx context.Context, fn kis.Function) (kis.Funct
 		}
 	}
 
-	if err := flow.commitCurData(ctx); err != nil {
-		return nil, err
-	}
-
 	flow.PrevFunctionId = flow.ThisFunctionId
 	fn = fn.Next()
 
