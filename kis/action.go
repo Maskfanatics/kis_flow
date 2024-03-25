@@ -4,6 +4,10 @@ type Action struct {
 	DataReuse bool
 
 	Abort bool
+
+	ForceEntryNext bool
+
+	JumpFunc string
 }
 
 type ActionFunc func(ops *Action)
@@ -28,4 +32,14 @@ func ActionAbort(action *Action) {
 
 func ActionDataReuse(action *Action) {
 	action.DataReuse = true
+}
+
+func ActionForceEntry(action *Action) {
+	action.ForceEntryNext = true
+}
+
+func ActionJumpFunc(funcName string) ActionFunc {
+	return func(action *Action) {
+		action.JumpFunc = funcName
+	}
 }

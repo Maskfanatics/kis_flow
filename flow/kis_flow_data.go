@@ -88,3 +88,16 @@ func (flow *KisFlow) commitReuseData(ctx context.Context) error {
 
 	return nil
 }
+
+func (flow *KisFlow) commitVoidData(ctx context.Context) error {
+	// 制作空数据
+	batch := make(common.KisRowArr, 0)
+
+	// 将本层计算的缓冲数据提交到本层结果数据中
+	flow.data[flow.ThisFunctionId] = batch
+
+	log.GetLogger().DebugFX(ctx, " ====> After commitVoidData, flow_name = %s, flow_id = %s\nAll Level Data =\n %+v\n", flow.Name, flow.Id, flow.data)
+
+	return nil
+
+}
