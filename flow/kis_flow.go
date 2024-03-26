@@ -3,6 +3,7 @@ package flow
 import (
 	"context"
 	"errors"
+	"github.com/patrickmn/go-cache"
 	"kis-flow/common"
 	"kis-flow/config"
 	"kis-flow/conn"
@@ -11,6 +12,7 @@ import (
 	"kis-flow/kis"
 	"kis-flow/log"
 	"sync"
+	"time"
 )
 
 type KisFlow struct {
@@ -42,6 +44,11 @@ type KisFlow struct {
 	action kis.Action
 
 	abort bool
+
+	cache *cache.Cache
+
+	metaData map[string]interface{}
+	mLock    sync.RWMutex
 }
 
 func (flow *KisFlow) Run(ctx context.Context) error {
@@ -125,6 +132,11 @@ func NewKisFlow(conf *config.KisFlowConfig) *KisFlow {
 
 	//数据
 	flow.data = make(common.KisDataMap)
+
+	flow.cache = cache.New(cache.NoExpiration, common.DefaultFlowCacheCleanUp*time.Minute)
+
+	flow.metaData = make(map[string]interface{})
+
 	return flow
 }
 
@@ -213,4 +225,24 @@ func (flow *KisFlow) Next(acts ...kis.ActionFunc) error {
 	flow.action = kis.LoadActions(acts)
 
 	return nil
+}
+
+func (flow *KisFlow) Fork(ctx context.Context) kis.Flow {
+	config := flow.Conf
+
+	// 通过之前的配置生成一个新的Flow
+	newFlow := NewKisFlow(config)
+
+	for _, fp := range flow.Conf.Flows {
+		if _, ok := flow.funcParams[flow.Funcs[fp.FuncName].GetId()]; !ok {
+			//当前function没有配置Params
+			newFlow.Link(flow.Funcs[fp.FuncName].GetConfig(), nil)
+		} else {
+			newFlow.Link(flow.Funcs[fp.FuncName].GetConfig(), fp.Params)
+		}
+	}
+	log.GetLogger().DebugFX(ctx, "=====>Flow Fork, oldFlow.funcParams = %+v\n", flow.funcParams)
+	log.GetLogger().DebugFX(ctx, "=====>Flow Fork, newFlow.funcParams = %+v\n", newFlow.GetFuncParamsAllFuncs())
+
+	return newFlow
 }

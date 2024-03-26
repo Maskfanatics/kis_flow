@@ -20,3 +20,12 @@ func (f *KisFunctionS) Call(ctx context.Context, flow kis.Flow) error {
 	}
 	return nil
 }
+
+func NewKisFunctionS() kis.Function {
+	f := new(KisFunctionS)
+
+	f.metaData = make(map[string]interface{})
+
+	return f
+
+}

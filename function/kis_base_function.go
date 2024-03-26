@@ -7,6 +7,7 @@ import (
 	"kis-flow/config"
 	"kis-flow/id"
 	"kis-flow/kis"
+	"sync"
 )
 
 type BaseFunction struct {
@@ -16,6 +17,9 @@ type BaseFunction struct {
 	Flow kis.Flow
 
 	connector kis.Connector
+
+	metaData map[string]interface{}
+	mLock    sync.RWMutex
 
 	N kis.Function
 	P kis.Function
@@ -98,16 +102,15 @@ func NewKisFunction(flow kis.Flow, config *config.KisFuncConfig) kis.Function {
 
 	switch common.KisMode(config.FMode) {
 	case common.V:
-		f = new(KisFunctionV)
-		break
+		f = NewKisFunctionV()
 	case common.S:
-		f = new(KisFunctionS)
+		f = NewKisFunctionS()
 	case common.L:
-		f = new(KisFunctionL)
+		f = NewKisFunctionL()
 	case common.C:
-		f = new(KisFunctionC)
+		f = NewKisFunctionC()
 	case common.E:
-		f = new(KisFunctionE)
+		f = NewKisFunctionE()
 	default:
 		//LOG ERROR
 		return nil
@@ -135,4 +138,24 @@ func (base *BaseFunction) AddConnector(conn kis.Connector) error {
 
 func (base *BaseFunction) GetConnector() kis.Connector {
 	return base.connector
+}
+
+func (base *BaseFunction) GetMetaData(key string) interface{} {
+	base.mLock.RLock()
+	defer base.mLock.RUnlock()
+
+	data, ok := base.metaData[key]
+	if !ok {
+		return nil
+	}
+
+	return data
+}
+
+func (base *BaseFunction) SetMetaData(key string, value interface{}) {
+	base.mLock.Lock()
+	defer base.mLock.Unlock()
+
+	base.metaData[key] = value
+
 }

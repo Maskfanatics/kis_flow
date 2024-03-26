@@ -1,5 +1,7 @@
 package common
 
+import "time"
+
 type KisMode string
 type KisOnOff int
 type KisConnType string
@@ -50,4 +52,12 @@ const (
 const (
 	FunctionIdFirstVirtual = "FunctionIdFirstVirtual"
 	FunctionIdLastVirtual  = "FunctionalIdLastVirtual"
+)
+
+//cache
+
+const (
+	DefaultFlowCacheCleanUp = 5 //min
+
+	DefaultExpiration time.Duration = 0
 )

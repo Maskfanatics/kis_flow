@@ -46,4 +46,10 @@ type Function interface {
 	// GetConnector 获取当前Function实例所关联的Connector
 	GetConnector() Connector
 	// ++++++++++++++++++++
+
+	// ++++++++++++++++++++++++++++++++++
+	// GetMetaData 得到当前Function的临时数据
+	GetMetaData(key string) interface{}
+	// SetMetaData 设置当前Function的临时数据
+	SetMetaData(key string, value interface{})
 }

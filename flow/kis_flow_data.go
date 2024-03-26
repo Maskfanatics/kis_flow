@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/patrickmn/go-cache"
 	"kis-flow/common"
+	"kis-flow/config"
 	"kis-flow/log"
+	"time"
 )
 
 func (flow *KisFlow) CommitRow(row interface{}) error {
@@ -100,4 +103,69 @@ func (flow *KisFlow) commitVoidData(ctx context.Context) error {
 
 	return nil
 
+}
+
+func (flow *KisFlow) GetCacheData(key string) interface{} {
+	if data, found := flow.cache.Get(key); found {
+		return data
+	}
+
+	return nil
+}
+
+func (flow *KisFlow) SetCacheData(key string, value interface{}, Exp time.Duration) {
+	if Exp == common.DefaultExpiration {
+		flow.cache.Set(key, value, cache.DefaultExpiration)
+	} else {
+		flow.cache.Set(key, value, Exp)
+	}
+}
+
+func (flow *KisFlow) GetMetaData(key string) interface{} {
+	flow.mLock.RLock()
+	defer flow.mLock.RUnlock()
+
+	data, ok := flow.metaData[key]
+	if !ok {
+		return nil
+	}
+	return data
+}
+
+func (flow *KisFlow) SetMetaData(key string, value interface{}) {
+	flow.mLock.Lock()
+	defer flow.mLock.Unlock()
+
+	flow.metaData[key] = value
+}
+
+func (flow *KisFlow) GetFuncParam(key string) string {
+	flow.fplock.RLock()
+	defer flow.fplock.RUnlock()
+
+	if param, ok := flow.funcParams[flow.ThisFunctionId]; ok {
+		if value, ok := param[key]; ok {
+			return value
+		}
+	}
+
+	return ""
+}
+
+func (flow *KisFlow) GetFuncParamAll() config.FParam {
+	flow.fplock.RLock()
+	defer flow.fplock.RUnlock()
+
+	if param, ok := flow.funcParams[flow.ThisFunctionId]; ok {
+		return param
+	}
+
+	return nil
+}
+
+func (flow *KisFlow) GetFuncParamsAllFuncs() map[string]config.FParam {
+	flow.fplock.RLock()
+	defer flow.fplock.RUnlock()
+
+	return flow.funcParams
 }
