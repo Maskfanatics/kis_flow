@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/patrickmn/go-cache"
+	"github.com/prometheus/client_golang/prometheus"
 	"kis-flow/common"
 	"kis-flow/config"
 	"kis-flow/conn"
@@ -11,6 +12,7 @@ import (
 	"kis-flow/id"
 	"kis-flow/kis"
 	"kis-flow/log"
+	"kis-flow/metrics"
 	"sync"
 	"time"
 )
@@ -53,16 +55,19 @@ type KisFlow struct {
 
 func (flow *KisFlow) Run(ctx context.Context) error {
 
-	flow.abort = false
-
 	var fn kis.Function
 
 	fn = flow.FlowHead
+
+	flow.abort = false
 
 	if flow.Conf.Status == int(common.FlowDisable) {
 		//flow被配置关闭
 		return nil
 	}
+
+	var funcStart time.Time
+	var flowStart time.Time
 
 	flow.PrevFunctionId = common.FunctionIdFirstVirtual
 
@@ -70,11 +75,27 @@ func (flow *KisFlow) Run(ctx context.Context) error {
 		return err
 	}
 
+	if config.GlobalConfig.EnableProm {
+		metrics.Metrics.FlowScheduleCntsTotal.WithLabelValues(flow.Name).Inc()
+	}
+
 	for fn != nil && flow.abort == false {
+
+		// flow记录当前执行到的Function 标记
 		fid := fn.GetId()
 		flow.ThisFunction = fn
 		flow.ThisFunctionId = fid
 
+		fName := fn.GetConfig().FName
+		fMode := fn.GetConfig().FMode
+
+		if config.GlobalConfig.EnableProm {
+			metrics.Metrics.FuncScheduleCntsTotal.WithLabelValues(fName, fMode).Inc()
+
+			funcStart = time.Now()
+		}
+
+		// 得到当前Function要处理与的源数据
 		if inputData, err := flow.getCurData(); err != nil {
 			log.GetLogger().ErrorFX(ctx, "flow.Run(): getCurData err = %s\n", err.Error())
 			return err
@@ -91,6 +112,22 @@ func (flow *KisFlow) Run(ctx context.Context) error {
 			}
 		}
 
+		if config.GlobalConfig.EnableProm {
+			duration := time.Since(funcStart)
+
+			metrics.Metrics.FunctionDuration.With(
+				prometheus.Labels{
+					common.LABEL_FUNCTION_NAME: fName,
+					common.LABEL_FUNCTION_MODE: fMode,
+				}).Observe(duration.Seconds() * 1000)
+		}
+
+	}
+
+	if config.GlobalConfig.EnableProm {
+		duration := time.Since(flowStart)
+
+		metrics.Metrics.FlowDuration.WithLabelValues(flow.Name).Observe(duration.Seconds() * 1000)
 	}
 
 	return nil

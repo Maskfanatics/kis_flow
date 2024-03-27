@@ -9,6 +9,7 @@ import (
 	"kis-flow/config"
 	"kis-flow/flow"
 	"kis-flow/kis"
+	"kis-flow/metrics"
 	"os"
 	"path"
 	"path/filepath"
@@ -75,6 +76,20 @@ func kisTypeConnConfigure(all *allConfig, confData []byte, fileName string, kisT
 
 }
 
+func kisTypeGlobalConfigure(confData []byte, fileName string, kisType interface{}) error {
+	if ok := yaml.Unmarshal(confData, config.GlobalConfig); ok != nil {
+		return errors.New(fmt.Sprintf("%s is wrong format kisType = %s", fileName, kisType))
+	}
+
+	metrics.RunMetrics()
+
+	// TODO 初始化Prometheus指标
+
+	// TODO 启动Prometheus指标Metrics服务
+
+	return nil
+}
+
 func parseConfigWalkYaml(loadPath string) (*allConfig, error) {
 	all := new(allConfig)
 
@@ -108,6 +123,8 @@ func parseConfigWalkYaml(loadPath string) (*allConfig, error) {
 				return kisTypeFuncConfigure(all, confData, filePath, kisType)
 			case common.KisIdTypeConnnector:
 				return kisTypeConnConfigure(all, confData, filePath, kisType)
+			case common.KisIdTypeGlobal:
+				return kisTypeGlobalConfigure(confData, filePath, kisType)
 			default:
 				return errors.New(fmt.Sprintf("%s set wrong kistype %s", filePath, kisType))
 			}

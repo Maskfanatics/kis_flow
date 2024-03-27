@@ -8,6 +8,7 @@ import (
 	"kis-flow/common"
 	"kis-flow/config"
 	"kis-flow/log"
+	"kis-flow/metrics"
 	"time"
 )
 
@@ -19,6 +20,7 @@ func (flow *KisFlow) CommitRow(row interface{}) error {
 func (flow *KisFlow) commitSrcData(ctx context.Context) error {
 	dataCnt := len(flow.buffer)
 	batch := make(common.KisRowArr, 0, dataCnt)
+
 	for _, rows := range flow.buffer {
 		batch = append(batch, rows)
 	}
@@ -27,6 +29,12 @@ func (flow *KisFlow) commitSrcData(ctx context.Context) error {
 	flow.data[common.FunctionIdFirstVirtual] = batch
 
 	flow.buffer = flow.buffer[0:0]
+
+	if config.GlobalConfig.EnableProm {
+		metrics.Metrics.DataTotal.Add(float64(dataCnt))
+
+		metrics.Metrics.FlowDataTotal.WithLabelValues(flow.Name).Add(float64(dataCnt))
+	}
 
 	log.GetLogger().DebugFX(ctx, "====> After CommitSrcData, flow_name = %s, flow_id = %s\nAll Level Data =\n %+v\n", flow.Name, flow.Id, flow.data)
 
