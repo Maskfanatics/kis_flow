@@ -3,7 +3,6 @@ package file
 import (
 	"errors"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"io/fs"
 	"kis-flow/common"
 	"kis-flow/config"
@@ -13,6 +12,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+
+	"gopkg.in/yaml.v3"
 )
 
 type allConfig struct {
@@ -168,7 +169,7 @@ func buildFlow(all *allConfig, fp config.KisFlowFunctionParam, newFlow kis.Flow,
 				_ = funcConfig.AddConnConfig(connConf)
 			}
 		}
-		if err := newFlow.Link(funcConfig, fp.Params); err != nil {
+		if err := newFlow.AppendNewFunction(funcConfig, fp.Params); err != nil {
 			return err
 		}
 	}

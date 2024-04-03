@@ -12,6 +12,8 @@ type Flow interface {
 
 	Link(fConfig *config.KisFuncConfig, fParams config.FParam) error
 
+	AppendNewFunction(fConf *config.KisFuncConfig, fParams config.FParam) error
+
 	CommitRow(row interface{}) error
 
 	Input() common.KisRowArr

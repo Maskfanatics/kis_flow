@@ -23,7 +23,7 @@ func TestConfigImportYmal(t *testing.T) {
 	kis.Pool().CaaS("ConnName1", "funcName2", common.S, caas.CaasDemoHanler1)
 
 	// 1. 加载配置文件并构建Flow
-	if err := file.ConfigImportYaml("/Users/riversome1/GolandProjects/kis-flow/test/load_conf/"); err != nil {
+	if err := file.ConfigImportYaml("./load_conf/"); err != nil {
 		panic(err)
 	}
 

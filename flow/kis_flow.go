@@ -3,8 +3,6 @@ package flow
 import (
 	"context"
 	"errors"
-	"github.com/patrickmn/go-cache"
-	"github.com/prometheus/client_golang/prometheus"
 	"kis-flow/common"
 	"kis-flow/config"
 	"kis-flow/conn"
@@ -15,6 +13,9 @@ import (
 	"kis-flow/metrics"
 	"sync"
 	"time"
+
+	"github.com/patrickmn/go-cache"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type KisFlow struct {
@@ -134,29 +135,21 @@ func (flow *KisFlow) Run(ctx context.Context) error {
 }
 
 func (flow *KisFlow) Link(fConfig *config.KisFuncConfig, fParams config.FParam) error {
-	f := function.NewKisFunction(flow, fConfig)
 
-	if fConfig.Option.CName != "" {
-		connConfig, err := fConfig.GetConnConfig()
-		if err != nil {
-			panic(err)
-		}
-		connector := conn.NetKisConnector(connConfig)
+	// Flow 添加Function
+	_ = flow.AppendNewFunction(fConfig, fParams)
 
-		if err = connector.Init(); err != nil {
-			panic(err)
-		}
-
-		_ = f.AddConnector(connector)
+	// FlowConfig 添加Function
+	flowFuncParam := config.KisFlowFunctionParam{
+		FuncName: fConfig.FName,
+		Params:   fParams,
 	}
+	flow.Conf.AppendFunctionConfig(flowFuncParam)
 
-	if err := flow.appendFunc(f, fParams); err != nil {
-		return err
-	}
 	return nil
 }
 
-func NewKisFlow(conf *config.KisFlowConfig) *KisFlow {
+func NewKisFlow(conf *config.KisFlowConfig) kis.Flow {
 	flow := new(KisFlow)
 
 	flow.Id = id.KisId(common.KisIdTypeFlow)
@@ -282,4 +275,38 @@ func (flow *KisFlow) Fork(ctx context.Context) kis.Flow {
 	log.GetLogger().DebugFX(ctx, "=====>Flow Fork, newFlow.funcParams = %+v\n", newFlow.GetFuncParamsAllFuncs())
 
 	return newFlow
+}
+
+// AppendNewFunction 将一个新的Function追加到到Flow中
+func (flow *KisFlow) AppendNewFunction(fConf *config.KisFuncConfig, fParams config.FParam) error {
+	// 创建Function实例
+	f := function.NewKisFunction(flow, fConf)
+
+	if fConf.Option.CName != "" {
+		// 当前Function有Connector关联，需要初始化Connector实例
+
+		// 获取Connector配置
+		connConfig, err := fConf.GetConnConfig()
+		if err != nil {
+			panic(err)
+		}
+
+		// 创建Connector对象
+		connector := conn.NetKisConnector(connConfig)
+
+		// 初始化Connector, 执行Connector Init 方法
+		if err = connector.Init(); err != nil {
+			panic(err)
+		}
+
+		// 关联Function实例和Connector实例关系
+		_ = f.AddConnector(connector)
+	}
+
+	// Flow 添加 Function
+	if err := flow.appendFunc(f, fParams); err != nil {
+		return err
+	}
+
+	return nil
 }

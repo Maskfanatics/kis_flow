@@ -5,13 +5,10 @@ import (
 	"kis-flow/common"
 )
 
-// FaaS Function as a Service
-type FaaS func(context.Context, Flow) error
-
 // funcRouter
 // key: Function Name
 // value: Function 回调自定义业务
-type funcRouter map[string]FaaS
+type funcRouter map[string]*FaaSDesc
 
 // flowRouter
 // key: Flow Name
@@ -32,7 +29,7 @@ type connInitRouter map[string]ConnInit
 	Connector Call
 */
 // CaaS Connector的存储读取业务实现
-type CaaS func(context.Context, Connector, Function, Flow, interface{}) error
+type CaaS func(context.Context, Connector, Function, Flow, interface{}) (interface{}, error)
 
 // connFuncRouter 通过FunctionName索引到CaaS回调存储业务的映射关系
 // key: Function Name
