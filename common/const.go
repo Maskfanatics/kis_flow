@@ -57,7 +57,7 @@ const (
 //cache
 
 const (
-	DefaultFlowCacheCleanUp = 5 //min
+	DefaultFlowCacheCleanUp = 10 //min
 
 	DefaultExpiration time.Duration = 0
 )
